@@ -50,4 +50,15 @@ async def update_user(username:str, new_data:UpdateUser):
     updated_user = await db["temp_users"].find_one({"username": username})
     return updated_user
 
+
+@router.delete("/{username}", status_code=204)
+async def delete_user(username:str):
+    user = await db.temp_users.find_one({"username":{"$eq":username}})
+    if not user:
+        raise HTTPException(404, "User not found!")
+
+    await db.temp_users.delete_one({"username": {"$eq": username}})
+    
+    return user
+
  
