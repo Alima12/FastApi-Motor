@@ -46,7 +46,7 @@ async def update_user(username:str, new_data:UpdateUser):
     user = await db.temp_users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User Not found")
-    new_user = await db["temp_users"].update_one({"username": username}, {"$set":new_data})
+    await db["temp_users"].update_one({"username": username}, {"$set":new_data})
     updated_user = await db["temp_users"].find_one({"username": username})
     return updated_user
 
