@@ -10,14 +10,14 @@ router = APIRouter(
     prefix="/users"
 )
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("/", response_model=List[UserResponse], response_description="Get All Users")
 async def users_list():
     users = db.temp_users.find()
     users = await users.to_list(length=10)
     return users
 
 
-@router.get("/{username}", response_model=UserResponse)
+@router.get("/{username}", response_model=UserResponse, response_description="Get One User")
 async def get_one(username:str):
     user = await db.temp_users.find_one({"username":{"$eq":username}})
     if not user:
@@ -40,7 +40,7 @@ async def new_user(user:User):
     return created_user
 
  
-@router.put("/put", response_description="Update User", response_model=UserResponse)
+@router.put("/update/{username}", response_description="Update User", response_model=UserResponse)
 async def update_user(username:str, new_data:UpdateUser):
     new_data = jsonable_encoder(new_data)
     user = await db.temp_users.find_one({"username":{"$eq":username}})
@@ -51,7 +51,7 @@ async def update_user(username:str, new_data:UpdateUser):
     return updated_user
 
 
-@router.delete("/{username}", status_code=204)
+@router.delete("/{username}", status_code=204, response_description="Delete User")
 async def delete_user(username:str):
     user = await db.temp_users.find_one({"username":{"$eq":username}})
     if not user:
