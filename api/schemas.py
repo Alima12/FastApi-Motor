@@ -1,12 +1,13 @@
 import motor.motor_asyncio
 from bson import ObjectId
 from pydantic import BaseModel, Field, EmailStr
+import certifi
 
-client = motor.motor_asyncio.AsyncIOMotorClient("localhost", port=27017)
+
+client = motor.motor_asyncio.AsyncIOMotorClient("",tlsCAFile=certifi.where())
 db = client.MyFastApi
 
 
-loop = client.get_io_loop()
 class PyObjectID(ObjectId):
     @classmethod
     def __get_validators__(cls):
