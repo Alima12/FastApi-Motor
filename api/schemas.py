@@ -1,12 +1,7 @@
-import motor.motor_asyncio
 from bson import ObjectId
 from pydantic import BaseModel, Field, EmailStr
 
-client = motor.motor_asyncio.AsyncIOMotorClient("localhost", port=27017)
-db = client.MyFastApi
 
-
-loop = client.get_io_loop()
 class PyObjectID(ObjectId):
     @classmethod
     def __get_validators__(cls):
@@ -69,5 +64,24 @@ class UpdateUser(BaseModel):
         schema_extra = {
             "example":{
                 "email":"test@example.com"
+            }
+        }
+
+
+class Tokens(BaseModel):
+    access_token:str
+    refresh_token:str
+    type:str = "Bearer"
+
+
+class LoginSchema(BaseModel):
+    identifier:str
+    password:str
+
+    class Config:
+            schema_extra = {
+            "example":{
+                "identifier":"test@example.com",
+                "password": "password"
             }
         }
