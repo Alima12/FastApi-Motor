@@ -38,10 +38,8 @@ class User(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: PyObjectID=Field(default_factory=PyObjectID, alias="_id")
     username: str=Field(...)
     email: EmailStr=Field(...)
-
     class Config:
         allowed_population_by_field_name=True
         arbitrary_types_allowed=True

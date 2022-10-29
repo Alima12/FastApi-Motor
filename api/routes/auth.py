@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from api.schemas import UserResponse, Tokens
 from fastapi.encoders import jsonable_encoder
 from api.utils import verify_password
-from api.database import get_db
+from api.database import get_db, redis_conn
 from api.oauth2 import create_auth_tokens
 from fastapi_jwt_auth import AuthJWT
 from api.schemas import LoginSchema
@@ -20,8 +20,9 @@ denylist = set()
 
 @AuthJWT.token_in_denylist_loader
 def check_if_token_in_denylist(decrypted_token):
-    jti = decrypted_token['aid']
-    return jti in denylist
+    auth_id = decrypted_token['aid']
+    entry = redis_conn.get(auth_id)
+    return entry and entry == 'true'
 
 
 @router.post("/login", response_model=Tokens)
@@ -49,9 +50,9 @@ async def refresh(Authorize: AuthJWT = Depends()):
     Authorize.jwt_refresh_token_required()
     current_user_id = Authorize.get_jwt_subject()
     auth_id = Authorize.get_raw_jwt()['aid']
-    # redis_conn.setex(auth_id, settings.authjwt_refresh_token_expires, 'true')
-    denylist.add(auth_id)
+    redis_conn.setex(auth_id, settings.authjwt_refresh_token_expires, 'true')
     token = create_auth_tokens(current_user_id)
+
     return token
 
     

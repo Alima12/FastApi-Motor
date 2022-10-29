@@ -1,6 +1,7 @@
 import motor.motor_asyncio
 from .config import settings
 import certifi
+from redis import Redis
 
 
 client = motor.motor_asyncio.AsyncIOMotorClient("localhost", port=27017)
@@ -9,3 +10,9 @@ client = motor.motor_asyncio.AsyncIOMotorClient("localhost", port=27017)
 
 async def get_db():
     return client.MyFastApi
+
+
+redis_host = settings.redis_host
+redis_port = settings.redis_port
+redis_db = settings.redis_db
+redis_conn = Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)

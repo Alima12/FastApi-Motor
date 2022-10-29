@@ -24,7 +24,12 @@ async def get_me(Authorize: AuthJWT = Depends(), db = Depends(get_db)):
     Authorize.jwt_required()
     current_user_id = Authorize.get_jwt_subject()
     user = await db.users.find_one({"_id": current_user_id})
-    return user
+    if user:
+        return user
+
+    raise HTTPException(404, "User Not Found!")
+
+
 
 
 
