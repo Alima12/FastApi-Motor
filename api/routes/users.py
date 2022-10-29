@@ -14,15 +14,25 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[UserResponse])
-async def users_list():
-    users = db.temp_users.find()
+async def users_list(db = Depends(get_db)):
+    users = db.users.find()
     users = await users.to_list(length=10)
     return users
 
+@router.get("/get/me/", response_model=UserResponse)
+async def get_me(Authorize: AuthJWT = Depends(), db = Depends(get_db)):
+    Authorize.jwt_required()
+    current_user_id = Authorize.get_jwt_subject()
+    user = await db.users.find_one({"_id": current_user_id})
+    return user
+
+
+
+
 
 @router.get("/{username}", response_model=UserResponse)
-async def get_one(username:str):
-    user = await db.temp_users.find_one({"username":{"$eq":username}})
+async def get_one(username:str, db = Depends(get_db)):
+    user = await db.users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User not found!")
     return user
@@ -38,29 +48,28 @@ async def new_user(user:User, db = Depends(get_db)):
 
     user["password"] = hash_password(user["password"])
     new_user = await db["users"].insert_one(user)
-    # created_user = await db["users"].find_one({"_id": new_user.inserted_id})
     auth_result = create_auth_tokens(new_user.inserted_id, True)
     return auth_result
 
  
 @router.put("/put", response_description="Update User", response_model=UserResponse)
-async def update_user(username:str, new_data:UpdateUser):
+async def update_user(username:str, new_data:UpdateUser, db = Depends(get_db)):
     new_data = jsonable_encoder(new_data)
-    user = await db.temp_users.find_one({"username":{"$eq":username}})
+    user = await db.users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User Not found")
-    await db["temp_users"].update_one({"username": username}, {"$set":new_data})
-    updated_user = await db["temp_users"].find_one({"username": username})
+    await db["users"].update_one({"username": username}, {"$set":new_data})
+    updated_user = await db["users"].find_one({"username": username})
     return updated_user
 
 
 @router.delete("/{username}", status_code=204)
-async def delete_user(username:str):
-    user = await db.temp_users.find_one({"username":{"$eq":username}})
+async def delete_user(username:str, db = Depends(get_db)):
+    user = await db.users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User not found!")
 
-    await db.temp_users.delete_one({"username": {"$eq": username}})
+    await db.users.delete_one({"username": {"$eq": username}})
     
     return user
 
