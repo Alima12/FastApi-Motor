@@ -14,27 +14,14 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[UserResponse])
-async def users_list(db = Depends(get_db), request:Request=None):
-
+async def users_list():
     users = db.temp_users.find()
     users = await users.to_list(length=10)
     return users
 
 
-
-@router.get("/me", status_code=status.HTTP_200_OK, response_model=UserResponse)
-async def get_me(Authorize: AuthJWT = Depends(), db=Depends(get_db)):
-    Authorize.jwt_required()
-    current_user_id = Authorize.get_jwt_subject()
-    try:
-        current_user = await db.users.find_one({'_id': current_user_id})
-    except NetworkTimeout:
-        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request timed out.")
-    return current_user
-
-
 @router.get("/{username}", response_model=UserResponse)
-async def get_one(username:str, db = Depends(get_db)):
+async def get_one(username:str):
     user = await db.temp_users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User not found!")
@@ -57,18 +44,18 @@ async def new_user(user:User, db = Depends(get_db)):
 
  
 @router.put("/put", response_description="Update User", response_model=UserResponse)
-async def update_user(username:str, new_data:UpdateUser, db = Depends(get_db)):
+async def update_user(username:str, new_data:UpdateUser):
     new_data = jsonable_encoder(new_data)
     user = await db.temp_users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User Not found")
-    new_user = await db["temp_users"].update_one({"username": username}, {"$set":new_data})
+    await db["temp_users"].update_one({"username": username}, {"$set":new_data})
     updated_user = await db["temp_users"].find_one({"username": username})
     return updated_user
 
 
 @router.delete("/{username}", status_code=204)
-async def delete_user(username:str, db = Depends(get_db)):
+async def delete_user(username:str):
     user = await db.temp_users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User not found!")
