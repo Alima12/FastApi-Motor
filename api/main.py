@@ -9,14 +9,17 @@ from fastapi.responses import JSONResponse
 from starlette.responses import HTMLResponse, RedirectResponse
 
 app = FastAPI()
-
 app.include_router(users.router)
 app.include_router(auth.router)
 
 
 @app.get("/")
 def read_root():
-    return RedirectResponse("/docs")
+    return {"msg": "Hello World"}
+
+# @app.get("/")
+# def read_root():
+#     return RedirectResponse("/docs")
 
 
 
@@ -31,3 +34,5 @@ def authjwt_exception_handler(request: Request, exc: AuthJWTException):
 @AuthJWT.load_config
 def get_config():
     return settings
+
+

@@ -1,3 +1,4 @@
+import asyncio
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends, status, Header, Request
 from api.schemas import User, UserResponse, UpdateUser, Tokens
@@ -43,7 +44,7 @@ async def get_one(username:str, db = Depends(get_db)):
     return user
 
 
-@router.post("/register", response_description="Register User", response_model=Tokens)
+@router.post("/register", response_description="Register User", response_model=Tokens, status_code=status.HTTP_201_CREATED)
 async def new_user(user:User, db = Depends(get_db)):
     user = jsonable_encoder(user)
     username_found = await db["users"].find_one({"username":user["username"]})
