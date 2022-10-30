@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     authjwt_denylist_token_checks: set = {"access", "refresh"}
 
 
-    redis_host: str = "localhost"
+    redis_host: str
     redis_port: int = 6379
     redis_db: int = 0
 
