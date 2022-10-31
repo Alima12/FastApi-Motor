@@ -1,18 +1,19 @@
-import asyncio
+import re
 from typing import List
-from fastapi import APIRouter, HTTPException, Depends, status, Header, Request
+from fastapi import APIRouter, HTTPException, Depends, status
 from api.schemas import User, UserResponse, UpdateUser, Tokens
 from fastapi.encoders import jsonable_encoder
 from api.utils import hash_password
-import secrets
 from api.database import get_db
 from api.oauth2 import create_auth_tokens
 from fastapi_jwt_auth import AuthJWT
+from api.config import settings
 
 router = APIRouter(
     tags=["Users"],
     prefix="/users"
 )
+
 
 @router.get("/", response_model=List[UserResponse])
 async def users_list(db = Depends(get_db)):
@@ -32,11 +33,6 @@ async def get_me(Authorize: AuthJWT = Depends(), db = Depends(get_db)):
     raise HTTPException(404, "User Not Found!")
 
 
-
-
-
-
-
 @router.get("/{username}", response_model=UserResponse)
 async def get_one(username:str, db = Depends(get_db)):
     user = await db.users.find_one({"username":{"$eq":username}})
@@ -46,7 +42,7 @@ async def get_one(username:str, db = Depends(get_db)):
 
 
 @router.post("/register", response_description="Register User", response_model=Tokens, status_code=status.HTTP_201_CREATED)
-async def new_user(user:User, db = Depends(get_db)):
+async def new_user(user: User, db=Depends(get_db)):
     user = jsonable_encoder(user)
     username_found = await db["users"].find_one({"username":user["username"]})
     email_found = await db["users"].find_one({"email":user["email"]})
@@ -60,24 +56,31 @@ async def new_user(user:User, db = Depends(get_db)):
 
  
 @router.put("/put", response_description="Update User", response_model=UserResponse)
-async def update_user(username:str, new_data:UpdateUser, db = Depends(get_db)):
-    new_data = jsonable_encoder(new_data)
-    user = await db.users.find_one({"username":{"$eq":username}})
+async def update_user(new_data: UpdateUser, db=Depends(get_db), Authorize:AuthJWT=Depends()):
+    Authorize.fresh_jwt_required()
+    current_user_id = Authorize.get_jwt_subject()
+    user = await db.users.find_one({"_id": current_user_id})
     if not user:
-        raise HTTPException(404, "User Not found")
-    await db["users"].update_one({"username": username}, {"$set":new_data})
-    updated_user = await db["users"].find_one({"username": username})
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+
+    new_data = jsonable_encoder(new_data)
+    if not re.match(settings.email_regex, new_data["email"]):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Please enter a valid email")
+
+    await db["users"].update_one({"username": user["username"]}, {"$set": new_data})
+    updated_user = await db["users"].find_one({"username": user["username"]})
     return updated_user
 
 
-@router.delete("/{username}", status_code=204)
-async def delete_user(username:str, db = Depends(get_db)):
-    user = await db.users.find_one({"username":{"$eq":username}})
+@router.delete("/delete_account/", status_code=204)
+async def delete_account(db=Depends(get_db), Authorize: AuthJWT=Depends()):
+    Authorize.fresh_jwt_required()
+    current_user_id = Authorize.get_jwt_subject()
+    user = await db.users.find_one({"_id": current_user_id})
     if not user:
-        raise HTTPException(404, "User not found!")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
 
-    await db.users.delete_one({"username": {"$eq": username}})
-    
-    return user
+    await db.users.delete_one({"username": {"$eq": user["username"]}})
+
 
 
