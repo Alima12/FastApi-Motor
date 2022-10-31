@@ -3,6 +3,16 @@ from api.main import app
 from httpx import AsyncClient
 import asyncio
 import pytest
+from api.database import get_db
+import motor.motor_asyncio
+
+
+test_client = motor.motor_asyncio.AsyncIOMotorClient("localhost", port=27017)
+
+
+def get_test_db():
+    test_client.get_io_loop = asyncio.get_running_loop
+    return test_client.TestMyFastApi
 
 
 @pytest.fixture
@@ -15,8 +25,39 @@ refresh_token = ""
 
 
 class TestUser:
+    @classmethod
+    def setup_class(cls):
+        test_client.drop_database("TestMyFastApi")
+        app.dependency_overrides[get_db] = get_test_db
+
+    @classmethod
+    def teardown_class(cls):
+        del app.dependency_overrides[get_db]
+
     @pytest.mark.anyio
-    @pytest.mark.order(2)
+    @pytest.mark.order(1)
+    async def test_register(self):
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/users/register",
+                data=json.dumps(
+                    {
+                        "email": "aliali.ali1378@yahoo.com",
+                        "username": "alim",
+                        "password": "password"
+                    }
+                ),
+                headers={"X-Token": "Hello world"}
+            )
+
+            assert response.status_code == 201
+            keys = response.json().keys()
+            assert "access_token" in keys
+            assert "refresh_token" in keys
+            assert "type" in keys
+
+    @pytest.mark.anyio
+    @pytest.mark.order(3)
     async def test_user_login(self):
         global access_token, refresh_token
         async with AsyncClient(app=app, base_url="http://test", ) as ac:
@@ -24,7 +65,7 @@ class TestUser:
                 "/auth/login",
                 data=json.dumps(
                     {
-                        "identifier": "alimakk9764995511",
+                        "identifier": "aliali.ali1378@yahoo.com",
                         "password": "password"
                     }
                 ),
@@ -38,7 +79,7 @@ class TestUser:
             access_token, refresh_token = response.json()["access_token"], response.json()["refresh_token"]
 
     @pytest.mark.anyio
-    @pytest.mark.order(1)
+    @pytest.mark.order(2)
     async def test_login_fails(self):
         async with AsyncClient(app=app, base_url="http://test") as ac:
             ac.get_io_loop = asyncio.get_running_loop()
@@ -98,3 +139,15 @@ class TestUser:
             protected_endpoint = await ac.get("/users/get/me/", headers=headers)
             assert protected_endpoint.json() == {"detail": "Token has been revoked"}
             assert protected_endpoint.status_code == 401
+
+    @pytest.mark.anyio
+    @pytest.mark.order(after="TestUser::test_revoke_refresh_token")
+    async def test_delete_user(self):
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            username = "alim"
+            protected_endpoint = await ac.delete(f"/users/{username}")
+            assert protected_endpoint.status_code == 204
+
+
+
+

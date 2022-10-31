@@ -17,9 +17,4 @@ async def get_db():
 redis_host = settings.redis_host
 redis_port = settings.redis_port
 redis_db = settings.redis_db
-print(
-    redis_host,
-    redis_port,
-    redis_db
-)
 redis_conn = Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
