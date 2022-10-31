@@ -3,9 +3,11 @@ from .config import settings
 import certifi
 from redis import Redis
 import asyncio
+
 loop = asyncio.new_event_loop()
 client = motor.motor_asyncio.AsyncIOMotorClient("localhost", port=27017)
 # client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongodb_url, certifi.where())
+client.get_io_loop = asyncio.get_running_loop
 
 
 async def get_db():
