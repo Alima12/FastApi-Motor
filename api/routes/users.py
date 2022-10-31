@@ -20,6 +20,7 @@ async def users_list(db = Depends(get_db)):
     users = await users.to_list(length=10)
     return users
 
+
 @router.get("/get/me/", response_model=UserResponse)
 async def get_me(Authorize: AuthJWT = Depends(), db = Depends(get_db)):
     Authorize.jwt_required()

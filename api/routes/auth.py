@@ -51,7 +51,6 @@ async def refresh(Authorize: AuthJWT = Depends()):
     auth_id = Authorize.get_raw_jwt()['aid']
     redis_conn.setex(auth_id, settings.authjwt_refresh_token_expires, 'true')
     token = create_auth_tokens(current_user_id)
-
     return token
 
     
