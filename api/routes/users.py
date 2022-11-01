@@ -58,7 +58,7 @@ async def new_user(user: User, db=Depends(get_db)):
         await db.users.insert_one(user)
         token = create_auth_tokens(user['_id'], fresh=True)
         return token
-        # username & email fields have unique indexes so DuplicateKeyError may be raised
+
     except DuplicateKeyError as e:
         error_field_name = next(iter(e.details["keyPattern"]))
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,

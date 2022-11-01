@@ -1,6 +1,6 @@
 
 from typing import Union
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Path
 from api.routes import users, auth
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from fastapi_jwt_auth import AuthJWT
@@ -13,13 +13,13 @@ app.include_router(users.router)
 app.include_router(auth.router)
 
 
-@app.get("/")
-def read_root():
-    return {"msg": "Hello World"}
-
 # @app.get("/")
 # def read_root():
-#     return RedirectResponse("/docs")
+#     return {"msg": "Hello World"}
+
+@app.get("/")
+def read_root():
+    return RedirectResponse("/docs")
 
 
 
