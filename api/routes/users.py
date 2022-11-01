@@ -1,6 +1,8 @@
 import re
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends, status
+from pymongo.errors import DuplicateKeyError, NetworkTimeout
+
 from api.schemas import User, UserResponse, UpdateUser, Tokens
 from fastapi.encoders import jsonable_encoder
 from api.utils import hash_password
@@ -34,7 +36,13 @@ async def get_me(Authorize: AuthJWT = Depends(), db = Depends(get_db)):
 
 
 @router.get("/{username}", response_model=UserResponse)
-async def get_one(username:str, db = Depends(get_db)):
+async def get_one(username:str, db = Depends(get_db), Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    current_user_id = Authorize.get_jwt_subject()
+    user = await db.users.find_one({"_id": current_user_id})
+    if not user["is_admin"]:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You don't have permission")
+
     user = await db.users.find_one({"username":{"$eq":username}})
     if not user:
         raise HTTPException(404, "User not found!")
@@ -43,16 +51,21 @@ async def get_one(username:str, db = Depends(get_db)):
 
 @router.post("/register", response_description="Register User", response_model=Tokens, status_code=status.HTTP_201_CREATED)
 async def new_user(user: User, db=Depends(get_db)):
-    user = jsonable_encoder(user)
-    username_found = await db["users"].find_one({"username":user["username"]})
-    email_found = await db["users"].find_one({"email":user["email"]})
-    if username_found or email_found:
-        raise HTTPException(409, "User is already Exists")
+    try:
+        user.password = hash_password(user.password)
+        user = jsonable_encoder(user)
+        user["is_admin"] = False
+        await db.users.insert_one(user)
+        token = create_auth_tokens(user['_id'], fresh=True)
+        return token
+        # username & email fields have unique indexes so DuplicateKeyError may be raised
+    except DuplicateKeyError as e:
+        error_field_name = next(iter(e.details["keyPattern"]))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=f'{error_field_name.title()} already exists.')
+    except NetworkTimeout:
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request timed out.")
 
-    user["password"] = hash_password(user["password"])
-    new_user = await db["users"].insert_one(user)
-    auth_result = create_auth_tokens(new_user.inserted_id, True)
-    return auth_result
 
  
 @router.put("/put", response_description="Update User", response_model=UserResponse)
