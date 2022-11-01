@@ -40,6 +40,7 @@ class User(BaseModel):
 class UserResponse(BaseModel):
     username: str=Field(...)
     email: EmailStr=Field(...)
+    is_admin: bool = False
     class Config:
         allowed_population_by_field_name=True
         arbitrary_types_allowed=True
