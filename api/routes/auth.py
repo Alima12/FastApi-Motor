@@ -25,14 +25,8 @@ def check_if_token_in_denylist(decrypted_token):
 
 @router.post("/login", response_model=Tokens)
 async def login(user:LoginSchema, db = Depends(get_db)):
-    email_regex_pattern = settings.email_regex
-    username_regex_pattern = settings.username_regex
-    found_user = None
     try:
-        if re.fullmatch(email_regex_pattern, user.identifier):
-            found_user = await db.users.find_one({"email": user.identifier})
-        elif re.fullmatch(username_regex_pattern, user.identifier):
-            found_user = await db.users.find_one({"username": user.identifier})
+        found_user = await db.users.find_one({"$or": [{"username": user.identifier}, {"email": user.identifier}]})
     except NetworkTimeout:
         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request timed out.")
 

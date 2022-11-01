@@ -1,5 +1,10 @@
 from bson import ObjectId
 from pydantic import BaseModel, Field, EmailStr
+from fastapi import Body
+from api.config import settings
+import re
+import pydantic
+
 
 class PyObjectID(ObjectId):
     @classmethod
@@ -20,9 +25,13 @@ class PyObjectID(ObjectId):
 
 class User(BaseModel):
     id: PyObjectID=Field(default_factory=PyObjectID, alias="_id")
-    username: str=Field(...)
-    email: EmailStr=Field(...)
+    username: str = Body(..., regex=settings.username_regex)
+    email: str = Body(..., regex=settings.email_regex)
     password: str = Field(...)
+
+    @pydantic.validator("username", "email")
+    def validate_identifier(cls, value):
+        return value.lower()
 
     class Config:
         allowed_population_by_field_name=True
@@ -41,6 +50,11 @@ class UserResponse(BaseModel):
     username: str=Field(...)
     email: EmailStr=Field(...)
     is_admin: bool = False
+
+    @pydantic.validator("username", "email")
+    def validate_identifier(cls, value):
+        return value.lower()
+
     class Config:
         allowed_population_by_field_name=True
         arbitrary_types_allowed=True
@@ -73,13 +87,22 @@ class Tokens(BaseModel):
 
 
 class LoginSchema(BaseModel):
-    identifier:str
-    password:str
+    identifier: str
+    password: str
+
+    @pydantic.validator("identifier")
+    def validate_identifier(cls, value):
+        if re.fullmatch(settings.email_regex, value):
+            return value
+        elif re.fullmatch(settings.username_regex, value):
+            return value.lower()
+
+        raise ValueError("Identifier is not valid!")
 
     class Config:
-            schema_extra = {
-            "example":{
-                "identifier":"test@example.com",
-                "password": "password"
-            }
+        schema_extra = {
+                "example": {
+                    "identifier": "test@example.com",
+                    "password": "password"
+                }
         }
