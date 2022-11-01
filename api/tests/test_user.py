@@ -118,6 +118,7 @@ class TestUser:
                 'accept': 'application/json'
             }
             protected_endpoint = await ac.post("/auth/refresh", headers=headers)
+            _token = protected_endpoint.json()["access_token"]
             tokens = protected_endpoint.json().keys()
             assert protected_endpoint.status_code == 200
             assert "access_token" in tokens
@@ -140,13 +141,19 @@ class TestUser:
             assert protected_endpoint.json() == {"detail": "Token has been revoked"}
             assert protected_endpoint.status_code == 401
 
+        access_token = _token
+
     @pytest.mark.anyio
     @pytest.mark.order(after="TestUser::test_revoke_refresh_token")
     async def test_delete_user(self):
+        global access_token
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            username = "alim"
-            protected_endpoint = await ac.delete(f"/users/{username}")
-            assert protected_endpoint.status_code == 204
+            headers = {
+                "token": access_token,
+            }
+            protected_endpoint = await ac.delete("/users/delete_account/", headers=headers)
+            assert protected_endpoint.status_code == 401
+            assert protected_endpoint.json() == {"detail": "Fresh token required"}
 
 
 
