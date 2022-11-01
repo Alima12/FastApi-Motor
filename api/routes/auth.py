@@ -16,13 +16,12 @@ router = APIRouter(
 )
 
 
-denylist = set()
-
 @AuthJWT.token_in_denylist_loader
 def check_if_token_in_denylist(decrypted_token):
     auth_id = decrypted_token['aid']
     entry = redis_conn.get(auth_id)
     return entry and entry == 'true'
+
 
 @router.post("/login", response_model=Tokens)
 async def login(user:LoginSchema, db = Depends(get_db)):
