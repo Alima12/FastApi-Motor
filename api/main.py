@@ -13,13 +13,13 @@ app.include_router(users.router)
 app.include_router(auth.router)
 
 
-# @app.get("/")
-# def read_root():
-#     return {"msg": "Hello World"}
-
 @app.get("/")
 def read_root():
-    return RedirectResponse("/docs")
+    return {"msg": "Hello World"}
+
+# @app.get("/")
+# def read_root():
+#     return RedirectResponse("/docs")
 
 
 
